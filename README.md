@@ -14,6 +14,7 @@
 cd /usr/local/openresty/site/lualib
 git clone https://github.com/k8scat/lua-resty-http.git
 git clone https://github.com/k8scat/lua-resty-jwt.git
+git clone https://github.com/jkeys089/lua-resty-hmac.git
 git clone https://github.com/k8scat/lua-resty-weauth.git
 ```
 
@@ -23,7 +24,7 @@ git clone https://github.com/k8scat/lua-resty-weauth.git
 
 ```conf
 http {
-    lua_package_path "/usr/local/openresty/site/lualib/lua-resty-weauth/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/vendor/?.lua;/usr/local/openresty/site/lualib/lua-resty-http/lib/?.lua;;";
+    lua_package_path "/usr/local/openresty/site/lualib/lua-resty-weauth/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-hmac/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/lib/?.lua;/usr/local/openresty/site/lualib/lua-resty-jwt/vendor/?.lua;/usr/local/openresty/site/lualib/lua-resty-http/lib/?.lua;;";
 }
 ```
 
@@ -42,8 +43,8 @@ server {
     ssl_protocols TLSv1 TLSv1.1 TLSv1.2;
     ssl_ciphers AESGCM:HIGH:!aNULL:!MD5;
     ssl_prefer_server_ciphers  on;
-    lua_ssl_verify_depth 2;
-    lua_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt;
+    lua_ssl_verify_depth 2; #非必须
+    lua_ssl_trusted_certificate /etc/pki/tls/certs/ca-bundle.crt; #非必须
     if ($time_iso8601 ~ "^(\d{4})-(\d{2})-(\d{2})T(\d{2})") {
         set $year $1;
         set $month $2;
@@ -62,9 +63,10 @@ server {
         weauth.app_domain = "weauth.example.com"
 
         weauth.jwt_secret = "thisisjwtsecret"
-
+        weauth.only_wxwork_browser = false
+        weauth.qrConnect = false
         weauth.ip_blacklist = {"47.1.2.3"}
-        weauth.uri_whitelist = {"/"}
+        weauth.uri_whitelist = {"/js","/static/"} #不验证的路径示例
         weauth.department_whitelist = {1, 2}
 
         weauth:auth()
@@ -94,6 +96,8 @@ server {
 - `logout_uri` 用于设置登出地址
 - `app_domain` 用于设置访问域名（需和业务服务的访问域名一致）
 - `jwt_secret` 用于设置 JWT secret
+- `qrConnect` 是使用扫码，还是网页授权，默认是扫码
+- `only_wxwork_browser` 是只能在微信浏览器中打开，还是可以在任意浏览器中打开，默认可以在任意浏览器中打开
 - `ip_blacklist` 用于设置 IP 黑名单
 - `uri_whitelist` 用于设置地址白名单，例如首页不需要登录认证
 - `department_whitelist` 用于设置部门白名单（数字），默认不限制部门

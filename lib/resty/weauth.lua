@@ -24,7 +24,10 @@ _M.callback_uri = "/weauth_callback"
 _M.app_domain = ""
 
 _M.jwt_secret = ""
-_M.jwt_expire = 28800 -- 8小时
+_M.jwt_expire = 86400 -- 24小时
+
+_M.only_wxwork_browser = false
+_M.qrConnect = false
 
 _M.logout_uri = "/weauth_logout"
 _M.logout_redirect = "/"
@@ -54,6 +57,11 @@ local function has_value(tab, val)
     return false
 end
 
+local function is_wxwork_browser()
+    local user_agent = ngx.var.http_user_agent or ""
+    return user_agent:lower():find("wxwork") ~= nil
+end
+
 function _M:get_access_token()
     local url = "https://qyapi.weixin.qq.com/cgi-bin/gettoken"
     local query = {
@@ -75,6 +83,12 @@ function _M:get_access_token()
 end
 
 function _M:sso()
+    local uri
+    if self.qrConnect then
+        uri = "https://open.work.weixin.qq.com/wwopen/sso/qrConnect?"
+    else
+        uri = "https://open.weixin.qq.com/connect/oauth2/authorize?"
+    end
     local callback_url = ngx.var.scheme .. "://" .. self.app_domain .. self.callback_uri
     local redirect_url = ngx.var.scheme .. "://" .. self.app_domain .. ngx.var.request_uri
     local args = ngx.encode_args({
@@ -83,7 +97,7 @@ function _M:sso()
         redirect_uri = callback_url,
         state = redirect_url
     })
-    return ngx.redirect("https://open.work.weixin.qq.com/wwopen/sso/qrConnect?" .. args)
+    return ngx.redirect(uri .. args)
 end
 
 function _M:clear_token()
@@ -245,8 +259,7 @@ function _M:sso_callback()
         ngx.log(ngx.ERR, "sign token failed: ", err)
         return ngx.exit(ngx.HTTP_FORBIDDEN)
     end
-    ngx.header["Set-Cookie"] = self.cookie_key .. "=" .. token
-
+    ngx.header["Set-Cookie"] = {self.cookie_key .. "=" .. token,"userid=" .. user_id  .. "; Path=/; HttpOnly"}
     local redirect_url = request_args["state"]
     if not redirect_url or redirect_url == "" then
         redirect_url = "/"
@@ -258,6 +271,12 @@ function _M:auth()
     local request_uri = ngx.var.uri
     ngx.log(ngx.ERR, "request uri: ", request_uri)
 
+    -- 判断是否企业微信浏览器
+    if self.only_wxwork_browser and not is_wxwork_browser() then
+        ngx.header.content_type = 'text/plain; charset=utf-8'
+        return ngx.say("请在企业微信中使用")
+    end
+    
     if has_value(self.uri_whitelist, request_uri) then
         ngx.log(ngx.ERR, "uri in whitelist: ", request_uri)
         return
@@ -272,7 +291,6 @@ function _M:auth()
     if request_uri == self.logout_uri then
         return self:logout()
     end
-
     local payload, err = self:verify_token()
     if payload then
         if self:check_user_access(payload) then
