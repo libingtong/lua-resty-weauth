@@ -27,7 +27,7 @@ _M.jwt_secret = ""
 _M.jwt_expire = 86400 -- 24小时
 
 _M.only_wxwork_browser = false
-_M.qrConnect = false
+_M.qr_connect = false
 
 _M.logout_uri = "/weauth_logout"
 _M.logout_redirect = "/"
@@ -84,7 +84,7 @@ end
 
 function _M:sso()
     local uri
-    if self.qrConnect then
+    if self.qr_connect then
         uri = "https://open.work.weixin.qq.com/wwopen/sso/qrConnect?"
     else
         uri = "https://open.weixin.qq.com/connect/oauth2/authorize?"

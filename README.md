@@ -1,6 +1,11 @@
 # lua-resty-weauth
 
 适用于 OpenResty / ngx_lua 的基于企业微信组织架构的登录认证
+## 更新
+
+1. 新增验证类型的选择，默认是扫码认证，可以设为客户端认证(详见qr_connect)；
+2. 新增是否只允许在企业微信浏览器中打开，默认允许任何浏览器(详见only_wxwork_browser);
+3. 记录企业微信的UserID到Session中。
 
 ## 使用
 
@@ -96,7 +101,7 @@ server {
 - `logout_uri` 用于设置登出地址
 - `app_domain` 用于设置访问域名（需和业务服务的访问域名一致）
 - `jwt_secret` 用于设置 JWT secret
-- `qrConnect` 是使用扫码，还是网页授权，默认是扫码
+- `qr_connect` 是使用扫码，还是网页授权，默认是扫码
 - `only_wxwork_browser` 是只能在微信浏览器中打开，还是可以在任意浏览器中打开，默认可以在任意浏览器中打开
 - `ip_blacklist` 用于设置 IP 黑名单
 - `uri_whitelist` 用于设置地址白名单，例如首页不需要登录认证
