@@ -27,7 +27,7 @@ _M.jwt_secret = ""
 _M.jwt_expire = 86400 -- 24小时
 
 _M.only_wxwork_browser = false
-_M.qr_connect = false
+_M.qrConnect = false
 
 _M.logout_uri = "/weauth_logout"
 _M.logout_redirect = "/"
@@ -84,20 +84,28 @@ end
 
 function _M:sso()
     local uri
-    if self.qr_connect then
-        uri = "https://open.work.weixin.qq.com/wwopen/sso/qrConnect?"
-    else
-        uri = "https://open.weixin.qq.com/connect/oauth2/authorize?"
-    end
+    
     local callback_url = ngx.var.scheme .. "://" .. self.app_domain .. self.callback_uri
     local redirect_url = ngx.var.scheme .. "://" .. self.app_domain .. ngx.var.request_uri
-    local args = ngx.encode_args({
+    local args = {
         appid = self.corp_id,
         agentid = self.app_agent_id,
-        redirect_uri = callback_url,
+        redirect_uri = callback_url
+    }
+
+    if self.qrConnect then
+        uri = "https://open.work.weixin.qq.com/wwopen/sso/qrConnect?"
         state = redirect_url
-    })
-    return ngx.redirect(uri .. args)
+        url_args = ngx.encode_args(args)
+    else
+        uri = "https://open.weixin.qq.com/connect/oauth2/authorize?"
+        args.response_type = "code"
+        args.scope = "snsapi_base"
+        url_args = ngx.encode_args(args) .. "&state=" .. ngx.escape_uri(redirect_url) .. "#wechat_redirect"
+    end
+
+    ngx.log(ngx.ERR, "redirect uri: ", json.encode(url_args))
+    return ngx.redirect(uri .. url_args)
 end
 
 function _M:clear_token()
@@ -152,6 +160,7 @@ end
 
 function _M:verify_token()
     local token = ngx.var.cookie_weauth_token
+    ngx.log(ngx.ERR, "ngx.var.cookie_weauth_token :", token)
     if not token then
         return nil, "token not found"
     end
@@ -195,6 +204,7 @@ function _M:sign_token(user)
 end
 
 function _M:check_user_access(user)
+    
     if type(self.department_whitelist) ~= "table" then
         ngx.log(ngx.ERR, "department_whitelist is not a table")
         return false
@@ -205,6 +215,7 @@ function _M:check_user_access(user)
 
     local department_ids = user["department"]
     if not department_ids or department_ids == "" then
+        ngx.log(ngx.ERR, "department_ids is null")
         return false
     end
     if type(department_ids) ~= "table" then
@@ -259,7 +270,8 @@ function _M:sso_callback()
         ngx.log(ngx.ERR, "sign token failed: ", err)
         return ngx.exit(ngx.HTTP_FORBIDDEN)
     end
-    ngx.header["Set-Cookie"] = {self.cookie_key .. "=" .. token,"userid=" .. user_id  .. "; Path=/; HttpOnly"}
+    ngx.header["Set-Cookie"] = {self.cookie_key .. "=" .. token,"userid=" .. user['userid']  .. "; Path=/; HttpOnly"}
+    ngx.log(ngx.ERR, "This Token: ", token)
     local redirect_url = request_args["state"]
     if not redirect_url or redirect_url == "" then
         redirect_url = "/"
@@ -274,7 +286,7 @@ function _M:auth()
     -- 判断是否企业微信浏览器
     if self.only_wxwork_browser and not is_wxwork_browser() then
         ngx.header.content_type = 'text/plain; charset=utf-8'
-        return ngx.say("请在企业微信中使用")
+        return ngx.say("请在企业微信-工作台-智通AI中使用")
     end
     
     if has_value(self.uri_whitelist, request_uri) then
@@ -291,6 +303,7 @@ function _M:auth()
     if request_uri == self.logout_uri then
         return self:logout()
     end
+    ngx.log(ngx.ERR, "Start : verify_token()", request_uri)
     local payload, err = self:verify_token()
     if payload then
         if self:check_user_access(payload) then
@@ -305,6 +318,7 @@ function _M:auth()
 
     if request_uri ~= self.callback_uri then
         return self:sso()
+        -- return self:sso_callback()
     end
     return self:sso_callback()
 end
