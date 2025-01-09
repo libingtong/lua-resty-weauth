@@ -93,7 +93,7 @@ function _M:sso()
         redirect_uri = callback_url
     }
 
-    if self.qrConnect then
+    if not is_wxwork_browser() then
         uri = "https://open.work.weixin.qq.com/wwopen/sso/qrConnect?"
         state = redirect_url
         url_args = ngx.encode_args(args)
@@ -104,7 +104,7 @@ function _M:sso()
         url_args = ngx.encode_args(args) .. "&state=" .. ngx.escape_uri(redirect_url) .. "#wechat_redirect"
     end
 
-    ngx.log(ngx.ERR, "redirect uri: ", json.encode(url_args))
+    ngx.log(ngx.ERR, "redirect uri: ", json.encode(url_args))ngx.log(ngx.ERR, "重定向 uri: ", json.encode(url_args))
     return ngx.redirect(uri .. url_args)
 end
 
