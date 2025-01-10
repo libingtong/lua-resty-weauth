@@ -69,9 +69,11 @@ server {
 
         weauth.jwt_secret = "thisisjwtsecret"
         weauth.only_wxwork_browser = false
-        weauth.qrConnect = false
+        weauth.auth_type = "auto" # 认证类型，默认是auto，可以设为qr_connect、client_connect
         weauth.ip_blacklist = {"47.1.2.3"}
         weauth.uri_whitelist = {"/js","/static/"} #不验证的路径示例
+        weauth.ua_whitelist = {"SeaDriveGUI"} #不验证的浏览器UA，多个用逗号分隔，配合ua_whitelist_urls使用
+        weauth.ua_whitelist_urls = {"/api2/"} #不验证UA的情况下，不验证的URL，多个用逗号分隔
         weauth.department_whitelist = {1, 2}
 
         weauth:auth()
@@ -101,11 +103,15 @@ server {
 - `logout_uri` 用于设置登出地址
 - `app_domain` 用于设置访问域名（需和业务服务的访问域名一致）
 - `jwt_secret` 用于设置 JWT secret
-- `qr_connect` 是使用扫码，还是网页授权，默认是扫码
+- `auth_type` 用于设置认证类型，默认是auto，可以设为qr_connect、client_connect
 - `only_wxwork_browser` 是只能在微信浏览器中打开，还是可以在任意浏览器中打开，默认可以在任意浏览器中打开
+- `only_wxwork_browser_tip` 是提示信息，默认是"请在企业微信中使用"
 - `ip_blacklist` 用于设置 IP 黑名单
 - `uri_whitelist` 用于设置地址白名单，例如首页不需要登录认证
 - `department_whitelist` 用于设置部门白名单（数字），默认不限制部门
+- `ua_whitelist` 用于设置浏览器UA白名单，多个用逗号分隔，配合ua_whitelist_urls使用
+- `ua_whitelist_urls` 用于设置不验证UA的情况下，不验证的URL，多个用逗号分隔
+
 
 ## 依赖模块
 

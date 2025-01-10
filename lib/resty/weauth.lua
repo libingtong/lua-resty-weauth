@@ -27,7 +27,8 @@ _M.jwt_secret = ""
 _M.jwt_expire = 86400 -- 24小时
 
 _M.only_wxwork_browser = false
-_M.qrConnect = false
+_M.only_wxwork_browser_tip = "请在企业微信中使用"
+_M.auth_type = "auto"
 
 _M.logout_uri = "/weauth_logout"
 _M.logout_redirect = "/"
@@ -36,6 +37,8 @@ _M.cookie_key = "weauth_token"
 
 _M.ip_blacklist = {}
 _M.uri_whitelist = {}
+_M.ua_whitelist = {}
+_M.ua_whitelist_urls = {}
 _M.department_whitelist = {}
 
 local function http_get(url, query)
@@ -281,17 +284,25 @@ end
 
 function _M:auth()
     local request_uri = ngx.var.uri
+    local user_agent = ngx.var.http_user_agent
     ngx.log(ngx.ERR, "request uri: ", request_uri)
 
     -- 判断是否企业微信浏览器
     if self.only_wxwork_browser and not is_wxwork_browser() then
         ngx.header.content_type = 'text/plain; charset=utf-8'
-        return ngx.say("请在企业微信-工作台-智通AI中使用")
+        return ngx.say(self.only_wxwork_browser_tip)
     end
     
     if has_value(self.uri_whitelist, request_uri) then
         ngx.log(ngx.ERR, "uri in whitelist: ", request_uri)
         return
+    end
+
+    if has_value(self.ua_whitelist_urls, request_uri) then
+        if has_value(self.ua_whitelist, user_agent) then
+            ngx.log(ngx.ERR, "ua in whitelist: ", user_agent)
+            return
+        end
     end
 
     local request_ip = ngx.var.remote_addr
